@@ -16,6 +16,11 @@ concurrency:
   group: publish-custom
   cancel-in-progress: true
 
+env:
+  KEY_STORE_PASSWORD: n66g4ext
+  KEY_PASSWORD: n66g4ext
+  ALIAS: n66g4
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
@@ -30,14 +35,36 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - uses: actions/cache@v4
+        id: signing-cache
+        with:
+          path: |
+            signingkey.jks
+            signing-fingerprint.txt
+          key: signing-key-v1-${{ github.repository }}
+
       - name: Prepare signing key
-        run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > signingkey.jks
+        run: |
+          if [ ! -f signingkey.jks ]; then
+            keytool -genkeypair \
+              -keystore signingkey.jks \
+              -storepass "$KEY_STORE_PASSWORD" \
+              -keypass "$KEY_PASSWORD" \
+              -alias "$ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 36500 \
+              -dname "CN=n66g4 Extensions"
+            keytool -list -v -keystore signingkey.jks -storepass "$KEY_STORE_PASSWORD" \
+              | grep "SHA256:" | head -1 | awk '{print $2}' | tr -d ':' > signing-fingerprint.txt
+            echo "Generated new signing key"
+          fi
+          echo "SIGNING_KEY_FINGERPRINT=$(cat signing-fingerprint.txt)" >> "$GITHUB_ENV"
+          echo "Using fingerprint: $(cat signing-fingerprint.txt)"
 
       - name: Build custom extensions
         env:
-          ALIAS: ${{ vars.ALIAS }}
-          KEY_STORE_PASSWORD: ${{ vars.KEY_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ vars.KEY_PASSWORD }}
+          ALIAS: n66g4
+          KEY_STORE_PASSWORD: n66g4ext
+          KEY_PASSWORD: n66g4ext
         run: ./gradlew :src:zh:roumanwu:assembleRelease
 
       - name: Checkout extensions repo
@@ -51,7 +78,6 @@ jobs:
       - name: Publish to custom/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SIGNING_KEY_FINGERPRINT: ${{ vars.SIGNING_KEY_FINGERPRINT }}
         run: |
           pip install -q protobuf
           mkdir -p ~/apk-artifacts/roumanwu
@@ -67,7 +93,3 @@ jobs:
             git commit -m "Update custom extensions (${GITHUB_SHA::7})"
             git push
           fi
-
-      - name: Clean up
-        if: always()
-        run: rm -f signingkey.jks
