@@ -1,0 +1,73 @@
+name: Publish custom extensions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".github/workflows/publish-custom.yml"
+      - ".github/scripts/publish-custom-repo.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-custom
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > signingkey.jks
+
+      - name: Build custom extensions
+        env:
+          ALIAS: ${{ vars.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ vars.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ vars.KEY_PASSWORD }}
+        run: ./gradlew :src:zh:roumanwu:assembleRelease
+
+      - name: Checkout extensions repo
+        uses: actions/checkout@v4
+        with:
+          repository: n66g4/extensions
+          ref: repo
+          path: extensions-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to custom/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNING_KEY_FINGERPRINT: ${{ vars.SIGNING_KEY_FINGERPRINT }}
+        run: |
+          pip install -q protobuf
+          mkdir -p ~/apk-artifacts/roumanwu
+          cp -r src/zh/roumanwu/build/* ~/apk-artifacts/roumanwu/
+          cd extensions-repo
+          python -u "$GITHUB_WORKSPACE/.github/scripts/publish-custom-repo.py" "${{ github.sha }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add custom/
+          if git diff --staged --quiet; then
+            echo "No index changes"
+          else
+            git commit -m "Update custom extensions (${GITHUB_SHA::7})"
+            git push
+          fi
+
+      - name: Clean up
+        if: always()
+        run: rm -f signingkey.jks

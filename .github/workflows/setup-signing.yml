@@ -1,0 +1,43 @@
+name: Setup signing key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  secrets: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Generate keystore
+        run: |
+          keytool -genkeypair \
+            -keystore signingkey.jks \
+            -storepass n66g4ext \
+            -keypass n66g4ext \
+            -alias n66g4 \
+            -keyalg RSA -keysize 2048 -validity 36500 \
+            -dname "CN=n66g4 Extensions"
+          FPR=$(keytool -list -v -keystore signingkey.jks -storepass n66g4ext \
+            | grep "SHA256:" | head -1 | awk '{print $2}' | tr -d ':')
+          echo "Fingerprint: $FPR"
+          echo "FINGERPRINT=$FPR" >> "$GITHUB_ENV"
+          base64 -w0 signingkey.jks > signingkey.jks.b64
+
+      - name: Save secrets and variables
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh secret set SIGNING_KEY < signingkey.jks.b64 --repo "${{ github.repository }}"
+          gh variable set SIGNING_KEY_FINGERPRINT --body "$FINGERPRINT" --repo "${{ github.repository }}"
+          gh variable set KEY_STORE_PASSWORD --body "n66g4ext" --repo "${{ github.repository }}"
+          gh variable set KEY_PASSWORD --body "n66g4ext" --repo "${{ github.repository }}"
+          gh variable set ALIAS --body "n66g4" --repo "${{ github.repository }}"
+          echo "Done. SIGNING_KEY_FINGERPRINT=$FINGERPRINT"
