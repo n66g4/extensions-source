@@ -4,29 +4,21 @@ import gzip
 import hashlib
 import json
 import os
+import shutil
 import sys
-import time
 from pathlib import Path
 
 import index_pb2
 from google.protobuf import json_format
 
 REPO_NAME = "n66g4/extensions"
-RELEASE_BASE_URL = f"https://github.com/{REPO_NAME}/releases/download"
+RAW_BASE_URL = f"https://github.com/{REPO_NAME}/raw/repo/custom"
 ICON_BASE_URL = "https://cdn.jsdelivr.net/gh/n66g4/extensions-source@main"
 SOURCE_DIR = Path(__file__).resolve().parents[2]
 ICON_FILE = "res/mipmap-xhdpi/ic_launcher.png"
 ARTIFACTS_DIR = Path.home() / "apk-artifacts"
 CUSTOM_DIR = Path.cwd() / "custom"
-
-
-def run_gh(*args: str) -> str:
-    import subprocess
-
-    result = subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
-    if result.returncode != 0:
-        raise RuntimeError(f"gh {' '.join(args)} failed: {result.stderr.strip()}")
-    return result.stdout.strip()
+JARS_DIR = CUSTOM_DIR / "jars"
 
 
 def get_icon_url(module: str, theme: str | None) -> str:
@@ -42,11 +34,10 @@ def get_icon_url(module: str, theme: str | None) -> str:
 
 def main() -> None:
     sha = sys.argv[1]
-    tag = sha[:7]
     signing_key = os.environ["SIGNING_KEY_FINGERPRINT"]
 
     extensions: list[index_pb2.Extension] = []
-    uploads: list[Path] = []
+    JARS_DIR.mkdir(parents=True, exist_ok=True)
 
     for info_file in ARTIFACTS_DIR.glob("**/keiyoushi-source-info.json"):
         with info_file.open(encoding="utf-8") as f:
@@ -56,13 +47,17 @@ def main() -> None:
         if jar is None:
             raise FileNotFoundError(f"No jar for {info['packageName']}")
 
+        shutil.copy2(jar, JARS_DIR / jar.name)
+        jar_url = f"{RAW_BASE_URL}/jars/{jar.name}"
+        apk_url = f"{RAW_BASE_URL}/jars/{apk.name}" if apk else ""
+
         ext = index_pb2.Extension(
             name=info["name"],
             packageName=info["packageName"],
             resources=index_pb2.Resources(
                 iconUrl=get_icon_url(info["module"], info.get("theme")),
-                apkUrl=f"{RELEASE_BASE_URL}/{tag}/{apk.name}" if apk else "",
-                jarUrl=f"{RELEASE_BASE_URL}/{tag}/{jar.name}",
+                apkUrl=apk_url,
+                jarUrl=jar_url,
             ),
             extensionLib=info["extensionLib"],
             versionCode=info["versionCode"],
@@ -80,9 +75,6 @@ def main() -> None:
             ],
         )
         extensions.append(ext)
-        if apk:
-            uploads.append(apk)
-        uploads.append(jar)
 
     if not extensions:
         print("No extensions built")
@@ -93,7 +85,7 @@ def main() -> None:
         name="n66g4 Custom",
         badgeLabel="N66",
         signingKey=signing_key,
-        contact=index_pb2.Contact(website="https://github.com/n66g4/extensions"),
+        contact=index_pb2.Contact(website=f"https://github.com/{REPO_NAME}"),
         extensionList=index_pb2.ExtensionList(extensions=extensions),
     )
 
@@ -109,20 +101,21 @@ def main() -> None:
     (CUSTOM_DIR / "index.pb").write_bytes(
         gzip.compress(index.SerializeToString(deterministic=True), mtime=0)
     )
-
-    # Upload release assets
-    try:
-        run_gh("release", "view", tag, "--repo", REPO_NAME)
-    except RuntimeError:
-        run_gh(
-            "release", "create", tag,
-            "--repo", REPO_NAME,
-            "--title", f"Custom extensions {tag}",
-            "--notes", f"Built from n66g4/extensions-source@{sha}",
+    (CUSTOM_DIR / "repo.json").write_text(
+        json.dumps(
+            {
+                "index_v2": f"{RAW_BASE_URL}/index.pb",
+                "meta": {
+                    "name": "n66g4 Custom",
+                    "website": f"https://github.com/{REPO_NAME}",
+                    "signingKeyFingerprint": signing_key,
+                },
+            },
+            indent=2,
         )
-        time.sleep(3)
-
-    run_gh("release", "upload", tag, *[str(f) for f in uploads], "--repo", REPO_NAME, "--clobber")
+        + "\n",
+        encoding="utf-8",
+    )
     print(f"Published {len(extensions)} extension(s) to {REPO_NAME}/custom/")
 
 
