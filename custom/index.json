@@ -11,24 +11,23 @@
         "name": "Roumanwu",
         "packageName": "eu.kanade.tachiyomi.extension.zh.roumanwu",
         "resources": {
-          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.21.apk",
+          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.22.apk",
           "iconUrl": "https://cdn.jsdelivr.net/gh/n66g4/extensions-source@main/src/zh/roumanwu/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.21.jar"
+          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.22.jar"
         },
         "extensionLib": "1.4",
-        "versionCode": "104021",
-        "versionName": "1.4.21",
+        "versionCode": "104022",
+        "versionName": "1.4.22",
         "contentWarning": "CONTENT_WARNING_NSFW",
         "sources": [
           {
             "id": "3647420805839021718",
             "name": "\u8089\u6f2b\u5c4b",
             "language": "zh",
-            "homeUrl": "https://roum28.xyz",
+            "homeUrl": "https://rouman5.com",
             "mirrorUrls": [
-              "https://roum28.xyz",
-              "https://rouva8.xyz",
-              "https://rou.video"
+              "https://rouman5.com",
+              "https://roum28.xyz"
             ]
           }
         ]
