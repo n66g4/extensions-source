@@ -1,0 +1,38 @@
+{
+  "name": "n66g4 Custom",
+  "badgeLabel": "N66",
+  "signingKey": "786C6FE83B896AD1E21A4CC036D59A2A99128850BF560367F3233DE749442C4E",
+  "contact": {
+    "website": "https://github.com/n66g4/extensions-source"
+  },
+  "extensionList": {
+    "extensions": [
+      {
+        "name": "Roumanwu",
+        "packageName": "eu.kanade.tachiyomi.extension.zh.roumanwu",
+        "resources": {
+          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.21.apk",
+          "iconUrl": "https://cdn.jsdelivr.net/gh/n66g4/extensions-source@main/src/zh/roumanwu/res/mipmap-xhdpi/ic_launcher.png",
+          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.21.jar"
+        },
+        "extensionLib": "1.4",
+        "versionCode": "104021",
+        "versionName": "1.4.21",
+        "contentWarning": "CONTENT_WARNING_NSFW",
+        "sources": [
+          {
+            "id": "3647420805839021718",
+            "name": "\u8089\u6f2b\u5c4b",
+            "language": "zh",
+            "homeUrl": "https://roum28.xyz",
+            "mirrorUrls": [
+              "https://roum28.xyz",
+              "https://rouva8.xyz",
+              "https://rou.video"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
