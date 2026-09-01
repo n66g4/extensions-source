@@ -3,6 +3,7 @@
 import gzip
 import hashlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -42,7 +43,7 @@ def get_icon_url(module: str, theme: str | None) -> str:
 def main() -> None:
     sha = sys.argv[1]
     tag = sha[:7]
-    signing_key = sys.environ["SIGNING_KEY_FINGERPRINT"]
+    signing_key = os.environ["SIGNING_KEY_FINGERPRINT"]
 
     extensions: list[index_pb2.Extension] = []
     uploads: list[Path] = []

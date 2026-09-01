@@ -78,6 +78,7 @@ jobs:
       - name: Publish to custom/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNING_KEY_FINGERPRINT: ${{ env.SIGNING_KEY_FINGERPRINT }}
         run: |
           pip install -q protobuf
           mkdir -p ~/apk-artifacts/roumanwu
