@@ -55,10 +55,8 @@ jobs:
               -dname "CN=n66g4 Extensions"
             keytool -list -v -keystore signingkey.jks -storepass "$KEY_STORE_PASSWORD" \
               | grep "SHA256:" | head -1 | awk '{print $2}' | tr -d ':' > signing-fingerprint.txt
-            echo "Generated new signing key"
           fi
           echo "SIGNING_KEY_FINGERPRINT=$(cat signing-fingerprint.txt)" >> "$GITHUB_ENV"
-          echo "Using fingerprint: $(cat signing-fingerprint.txt)"
 
       - name: Build custom extensions
         env:
@@ -67,30 +65,21 @@ jobs:
           KEY_PASSWORD: n66g4ext
         run: ./gradlew :src:zh:roumanwu:assembleRelease
 
-      - name: Checkout extensions repo
-        uses: actions/checkout@v4
-        with:
-          repository: n66g4/extensions
-          ref: repo
-          path: extensions-repo
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish to custom/
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SIGNING_KEY_FINGERPRINT: ${{ env.SIGNING_KEY_FINGERPRINT }}
         run: |
           pip install -q protobuf
           mkdir -p ~/apk-artifacts/roumanwu
           cp -r src/zh/roumanwu/build/* ~/apk-artifacts/roumanwu/
-          cd extensions-repo
-          python -u "$GITHUB_WORKSPACE/.github/scripts/publish-custom-repo.py" "${{ github.sha }}"
+          python -u .github/scripts/publish-custom-repo.py "${{ github.sha }}"
+
+      - name: Commit custom index
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add custom/
-          if git diff --staged --quiet; then
-            echo "No index changes"
-          else
-            git commit -m "Update custom extensions (${GITHUB_SHA::7})"
+          git diff --staged --quiet && echo "No changes" || {
+            git commit -m "Publish custom extensions (${GITHUB_SHA::7})"
             git push
-          fi
+          }

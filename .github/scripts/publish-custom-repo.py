@@ -11,13 +11,13 @@ from pathlib import Path
 import index_pb2
 from google.protobuf import json_format
 
-REPO_NAME = "n66g4/extensions"
-RAW_BASE_URL = f"https://github.com/{REPO_NAME}/raw/repo/custom"
+REPO_NAME = "n66g4/extensions-source"
+RAW_BASE_URL = f"https://github.com/{REPO_NAME}/raw/main/custom"
 ICON_BASE_URL = "https://cdn.jsdelivr.net/gh/n66g4/extensions-source@main"
 SOURCE_DIR = Path(__file__).resolve().parents[2]
 ICON_FILE = "res/mipmap-xhdpi/ic_launcher.png"
 ARTIFACTS_DIR = Path.home() / "apk-artifacts"
-CUSTOM_DIR = Path.cwd() / "custom"
+CUSTOM_DIR = Path(__file__).resolve().parents[2] / "custom"
 JARS_DIR = CUSTOM_DIR / "jars"
 
 
