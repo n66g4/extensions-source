@@ -6,7 +6,7 @@ plugins {
 
 keiyoushi {
     name = "Roumanwu"
-    versionCode = 22
+    versionCode = 23
     contentWarning = ContentWarning.NSFW
     libVersion = "1.4"
 
@@ -18,7 +18,7 @@ keiyoushi {
         baseUrl {
             mirrors(
                 "https://rouman5.com",
-                "https://roum28.xyz",
+                "https://roum29.xyz",
             )
         }
     }
