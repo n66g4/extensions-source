@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.extension.zh.roumanwu
 
+import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -10,6 +12,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
 import keiyoushi.utils.asJsoup
+import keiyoushi.utils.getPreferences
 import keiyoushi.utils.tryParse
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
@@ -20,11 +23,26 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Source
-abstract class Roumanwu : HttpSource() {
+abstract class Roumanwu :
+    HttpSource(),
+    ConfigurableSource {
 
     override val supportsLatest = true
 
-    override val client = network.client.newBuilder().addInterceptor(ScrambledImageInterceptor()).build()
+    private val preferences = getPreferences()
+
+    override val baseUrl get() = preferences.baseUrl
+
+    private val updateMirror = UpdateMirror(preferences)
+
+    override val client = network.client.newBuilder()
+        .apply { interceptors().add(0, updateMirror) }
+        .addInterceptor(ScrambledImageInterceptor())
+        .build()
+
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        setupUrlPreference(screen.context, screen, preferences)
+    }
 
     override fun popularMangaRequest(page: Int) = GET("$baseUrl/home", headers)
 
