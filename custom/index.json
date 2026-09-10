@@ -11,13 +11,13 @@
         "name": "Roumanwu",
         "packageName": "eu.kanade.tachiyomi.extension.zh.roumanwu",
         "resources": {
-          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.24.apk",
+          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.25.apk",
           "iconUrl": "https://cdn.jsdelivr.net/gh/n66g4/extensions-source@main/src/zh/roumanwu/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.24.jar"
+          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.25.jar"
         },
         "extensionLib": "1.4",
-        "versionCode": "104024",
-        "versionName": "1.4.24",
+        "versionCode": "104025",
+        "versionName": "1.4.25",
         "contentWarning": "CONTENT_WARNING_NSFW",
         "sources": [
           {
