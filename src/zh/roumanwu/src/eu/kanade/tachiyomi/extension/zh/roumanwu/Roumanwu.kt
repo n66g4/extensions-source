@@ -173,10 +173,11 @@ abstract class Roumanwu :
             ?.let { DATE_FORMAT.tryParse(it) }
             ?.takeIf { it != 0L }
 
+        val reversed = chapters.asReversed()
         if (updateDate != null) {
-            chapters.last().date_upload = updateDate
+            reversed.first().date_upload = updateDate
         }
-        return chapters
+        return reversed
     }
 
     override fun pageListRequest(chapter: SChapter): Request {
