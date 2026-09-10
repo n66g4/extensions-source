@@ -46,13 +46,29 @@ abstract class Roumanwu :
 
     override fun popularMangaRequest(page: Int) = GET("$baseUrl/home", headers)
 
-    private fun parseEntries(container: Element): List<SManga> = container.select("a[href*=/books/]").map {
-        SManga.create().apply {
-            title = it.selectFirst("div.truncate")!!.text()
-            url = it.attr("href")
-            thumbnail_url = it.selectFirst("div.bg-cover")!!.attr("style").substringAfter("background-image:url(\"").substringBefore("\")")
+    private fun parseEntries(container: Element): List<SManga> = container
+        .select("a.site-comic[href*=/books/], a[href*=/books/]")
+        .mapNotNull { anchor ->
+            val href = anchor.attr("href")
+            if (CHAPTER_URL_REGEX.matches(href)) return@mapNotNull null
+
+            val title = anchor.selectFirst("h3")?.text()
+                ?: anchor.selectFirst("div.truncate")?.text()
+                ?: anchor.attr("title").takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+
+            val thumbnail = anchor.selectFirst("div.site-comic-cover img")?.absUrl("src")
+                ?: anchor.selectFirst("div.bg-cover")?.attr("style")
+                    ?.substringAfter("background-image:url(\"")
+                    ?.substringBefore("\")")
+                ?: return@mapNotNull null
+
+            SManga.create().apply {
+                this.title = title
+                url = href
+                thumbnail_url = thumbnail
+            }
         }
-    }
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
@@ -60,12 +76,19 @@ abstract class Roumanwu :
     }
 
     private fun parseHomePage(document: Document, sections: Regex): MangasPage {
-        val entries = document.selectFirst("div.px-1")!!.children().flatMap { section ->
-            if (section.child(0).text().contains(sections)) {
-                parseEntries(section)
-            } else {
-                emptyList()
+        val entries = document.select("div.site-section-heading").flatMap { heading ->
+            val title = heading.selectFirst("h1, h2")?.text().orEmpty()
+            if (!sections.containsMatchIn(title)) return@flatMap emptyList()
+
+            var sibling = heading.nextElementSibling()
+            while (sibling != null) {
+                if (sibling.hasClass("site-comic-grid")) {
+                    return@flatMap parseEntries(sibling)
+                }
+                if (sibling.hasClass("site-section-heading")) break
+                sibling = sibling.nextElementSibling()
             }
+            emptyList()
         }.distinctBy { it.url }
 
         return MangasPage(entries, false)
@@ -87,65 +110,71 @@ abstract class Roumanwu :
 
     override fun searchMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val entries = parseEntries(document)
-        val hasNextPage = document.selectFirst("div.justify-end > a:contains(下一頁)") != null
+        val grid = document.selectFirst("div.site-comic-grid") ?: document.body()!!
+        val entries = parseEntries(grid)
+        val hasNextPage = document.select("a.site-button, nav a").any { it.text().contains("下一頁") }
         return MangasPage(entries, hasNextPage)
     }
 
     override fun mangaDetailsParse(response: Response): SManga = SManga.create().apply {
         val document = response.asJsoup()
-        val infobox = parseInfobox(document).iterator()
 
-        title = infobox.next()
-        thumbnail_url = document.selectFirst("div.basis-2\\/5 img")!!.absUrl("src")
-            .run { toHttpUrl().queryParameter("url") ?: this }
-        description = document.selectFirst("p:contains(簡介:)")!!.text().substring(3)
+        title = document.selectFirst("div.site-book-info h1")?.text()
+            ?: document.selectFirst("div.basis-3\\/5 .text-xl")?.text()
+            ?: return@apply
+
+        thumbnail_url = document.selectFirst("img.site-detail-cover")?.absUrl("src")
+            ?: document.selectFirst("div.basis-2\\/5 img")?.absUrl("src")
+                ?.run { toHttpUrl().queryParameter("url") ?: this }
+            ?: return@apply
+
+        description = document.selectFirst("div.site-book-synopsis p")?.text()
+            ?: document.selectFirst("p:contains(簡介:)")?.text()?.removePrefix("簡介:")
+            ?: ""
 
         val genres = ArrayList<String>()
-        for (text in infobox) {
-            val value = text.drop(3).trimStart()
+        for (dt in document.select("dl.site-book-data dt")) {
+            val value = dt.nextElementSibling()?.text()?.substringBefore(" · ")?.trim().orEmpty()
             if (value.isEmpty()) continue
-            when (text.take(3)) {
-                "別名:" -> if (value != title) description = "$text\n\n$description"
-
-                "作者:" -> author = value
-
-                "狀態:" -> status = when (value) {
-                    "連載中" -> SManga.ONGOING
-                    "已完結" -> SManga.COMPLETED
+            when (dt.text()) {
+                "別名" -> if (value != title) description = "別名: $value\n\n$description"
+                "作者" -> author = value
+                "狀態" -> status = when {
+                    value.contains("連載") -> SManga.ONGOING
+                    value.contains("完結") -> SManga.COMPLETED
                     else -> SManga.UNKNOWN
                 }
-
-                "地區:" -> genres.add(value)
-
-                "標籤:" -> genres.addAll(value.split(","))
+                "地區" -> genres.add(value)
+                "標籤" -> genres.addAll(value.split(","))
             }
         }
-        genre = genres.joinToString()
-    }
-
-    private fun parseInfobox(document: Document): List<String> {
-        val infobox = document.selectFirst("div.basis-3\\/5")!!.children()
-        check(infobox.size >= 6 && infobox[0].hasClass("text-xl"))
-        return infobox.map { it.text() }
+        document.selectFirst("meta[name=keywords]")?.attr("content")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.let { genres.addAll(it) }
+        genre = genres.distinct().joinToString()
     }
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        val chapters = document.select("a[href~=/books/.*/\\d+]").map {
+        val chapters = document.select("a.site-chapter-link, a[href~=/books/.*/\\d+]").map {
             SChapter.create().apply {
                 url = it.attr("href")
-                name = it.text()
+                name = it.selectFirst("span")?.text() ?: it.text()
             }
-        }.asReversed()
-        if (chapters.isNotEmpty()) {
-            for (text in parseInfobox(document).asReversed()) {
-                val date = DATE_FORMAT.tryParse(text)
-                if (date != 0L) {
-                    chapters[0].date_upload = date
-                    break
-                }
-            }
+        }
+        if (chapters.isEmpty()) return chapters
+
+        val updateDate = document.select("dl.site-book-data dt")
+            .firstOrNull { it.text() == "更新" }
+            ?.nextElementSibling()
+            ?.text()
+            ?.let { DATE_FORMAT.tryParse(it) }
+            ?.takeIf { it != 0L }
+
+        if (updateDate != null) {
+            chapters.last().date_upload = updateDate
         }
         return chapters
     }
@@ -184,5 +213,6 @@ abstract class Roumanwu :
     companion object {
         private val DATE_FORMAT = SimpleDateFormat("M/d/yyyy", Locale.ROOT)
         private val IMAGE_URL_REGEX = Regex(""""imageUrl":"([^"]+)""")
+        private val CHAPTER_URL_REGEX = Regex("^/books/[^/]+/\\d+$")
     }
 }
