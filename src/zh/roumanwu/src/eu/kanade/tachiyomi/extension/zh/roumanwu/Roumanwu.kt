@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.getPreferences
+import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
@@ -161,7 +162,9 @@ abstract class Roumanwu :
         val chapters = document.select("a.site-chapter-link, a[href~=/books/.*/\\d+]").map {
             SChapter.create().apply {
                 url = it.attr("href")
-                name = it.selectFirst("span")?.text() ?: it.text()
+                name = it.selectFirst("span")?.attr("title")?.takeIf { title -> title.isNotBlank() }
+                    ?: it.selectFirst("span")?.text()
+                    ?: it.text()
             }
         }
         if (chapters.isEmpty()) return chapters
@@ -180,16 +183,23 @@ abstract class Roumanwu :
         return reversed
     }
 
-    override fun pageListRequest(chapter: SChapter): Request {
-        // Rendered HTML might have links sitting on the boundary of two scripts
-        return super.pageListRequest(chapter).newBuilder().addHeader("rsc", "1").build()
-    }
-
     override fun pageListParse(response: Response): List<Page> {
         val html = response.body.string()
-        return IMAGE_URL_REGEX.findAll(html).mapIndexedTo(ArrayList()) { index, match ->
+
+        val fromLegacy = IMAGE_URL_REGEX.findAll(html).mapIndexedTo(ArrayList()) { index, match ->
             Page(index, imageUrl = match.groupValues[1])
         }
+        if (fromLegacy.isNotEmpty()) return fromLegacy
+
+        // TanStack hydration: imagePaths:$R[n]=["https://...", ...]
+        val marker = html.indexOf("imagePaths:")
+        val arrayStart = if (marker >= 0) html.indexOf("=[", marker) + 1 else -1
+        val arrayEnd = if (arrayStart > 0) html.indexOf(']', arrayStart) else -1
+        if (arrayEnd > arrayStart) {
+            return html.substring(arrayStart, arrayEnd + 1).parseAs<List<String>>()
+                .mapIndexed { index, url -> Page(index, imageUrl = url) }
+        }
+        return emptyList()
     }
 
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()

@@ -13,6 +13,7 @@ const val DEFAULT_BASE_URL = "https://roum29.xyz"
 
 private val DIZHI_URLS = listOf(
     "https://rou.pub/dizhi",
+    "https://rdz4.xyz/dizhi",
     "https://rdz3.xyz/dizhi",
 )
 
