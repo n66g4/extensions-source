@@ -1,7 +1,7 @@
 {
   "name": "n66g4 Custom",
   "badgeLabel": "N66",
-  "signingKey": "E7ED889B2A1D6E2E239348819DC8BBA735942F5EDACC7438F7BC00B126847443",
+  "signingKey": "D2FD8E75CCA63E692E1389DDA84949E0599D56117FCBD9FFEC66EDD9F68D1B40",
   "contact": {
     "website": "https://github.com/n66g4/extensions-source"
   },
@@ -11,13 +11,13 @@
         "name": "Roumanwu",
         "packageName": "eu.kanade.tachiyomi.extension.zh.roumanwu",
         "resources": {
-          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.26.apk",
+          "apkUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.6.28.apk",
           "iconUrl": "https://cdn.jsdelivr.net/gh/n66g4/extensions-source@main/src/zh/roumanwu/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.4.26.jar"
+          "jarUrl": "https://github.com/n66g4/extensions-source/raw/main/custom/jars/tachiyomi-zh.roumanwu-v1.6.28.jar"
         },
-        "extensionLib": "1.4",
-        "versionCode": "104026",
-        "versionName": "1.4.26",
+        "extensionLib": "1.6",
+        "versionCode": "106028",
+        "versionName": "1.6.28",
         "contentWarning": "CONTENT_WARNING_NSFW",
         "sources": [
           {
